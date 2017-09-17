@@ -4,6 +4,8 @@ namespace NuvoleWeb\DrupalComponentScaffold\Exceptions;
 
 /**
  * Class NotSupportedProjectTypeException.
+ *
+ * @package NuvoleWeb\DrupalComponentScaffold\Exceptions
  */
 class NotSupportedProjectTypeException extends \RuntimeException {
 

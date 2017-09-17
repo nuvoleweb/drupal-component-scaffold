@@ -4,7 +4,7 @@ namespace NuvoleWeb\DrupalComponentScaffold;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
-use Composer\Package\RootPackage;
+use Composer\Util\Filesystem;
 use DrupalComposer\DrupalScaffold\Handler as DrupalScaffold;
 use NuvoleWeb\DrupalComponentScaffold\Exceptions\DrupalCoreNotFoundException;
 use NuvoleWeb\DrupalComponentScaffold\Exceptions\NotSupportedProjectTypeException;
@@ -16,6 +16,9 @@ use NuvoleWeb\DrupalComponentScaffold\Exceptions\NotSupportedProjectTypeExceptio
  */
 class Handler {
 
+  /**
+   * Plugin key used in Composer 'script' section and as command name.
+   */
   const PLUGIN_KEY = 'drupal-component-scaffold';
 
   /**
@@ -40,6 +43,13 @@ class Handler {
   protected $package;
 
   /**
+   * Filesystem utility class.
+   *
+   * @var \Composer\Util\Filesystem
+   */
+  protected $fs;
+
+  /**
    * Composer plugin options.
    *
    * @var array
@@ -57,16 +67,15 @@ class Handler {
    *   IO instance.
    */
   public function __construct(Composer $composer, IOInterface $io) {
-    /** @var \Composer\Package\RootPackage $package */
     $this->composer = $composer;
     $this->io = $io;
-    $this->ensureDrupalCore();
+    $this->package = $composer->getPackage();
+    $this->fs = new Filesystem();
 
-    $package = $composer->getPackage();
-    $this->package = $package;
-    $this->setupOptions($package);
-    $this->setupInstallerPaths($package);
-    $this->setupScripts($package);
+    $this->ensureDrupalCore();
+    $this->ensureOptions();
+    $this->ensureInstallerPaths();
+    $this->ensureScripts();
   }
 
   /**
@@ -81,29 +90,13 @@ class Handler {
   }
 
   /**
-   * Check whereas Drupal core is among dependencies.
-   */
-  public function ensureDrupalCore() {
-    $package = $this->composer
-      ->getRepositoryManager()
-      ->getLocalRepository()
-      ->findPackage('drupal/core', '*');
-
-    if ($package === NULL) {
-      throw new DrupalCoreNotFoundException();
-    }
-  }
-
-  /**
    * Setup build directories.
    */
   protected function doSetupDirectories() {
-    $this->write(sprintf('Prepare custom projects directory at <comment>%s</comment>', $this->getProjectRoot()));
-    if (!file_exists($this->getProjectRoot())) {
-      mkdir($this->getProjectRoot(), 0755, TRUE);
-    }
+    $this->write('Prepare custom projects directory at <comment>%s</comment>', $this->getProjectRoot());
+    $this->fs->emptyDirectory($this->getProjectRoot());
 
-    $this->write(sprintf('Make <comment>%s</comment> writable', $this->getDefaultDirectory()));
+    $this->write('Make <comment>%s</comment> writable', $this->getDefaultDirectory());
     chmod($this->getDefaultDirectory(), 0755);
   }
 
@@ -112,10 +105,9 @@ class Handler {
    */
   protected function doCreateSymlink() {
     $symlink = $this->getProjectRoot() . '/' . $this->getProjectName();
-    $this->write(sprintf('Symlink project at <comment>%s</comment>', $symlink));
-    if (!file_exists($symlink)) {
-      symlink($this->getSymlinkTarget($symlink), $symlink);
-    }
+    $this->write('Symlink project at <comment>%s</comment>', $symlink);
+
+    $this->fs->relativeSymlink($this->getBuildRoot(), $symlink);
   }
 
   /**
@@ -125,7 +117,7 @@ class Handler {
     $content = file_get_contents(__DIR__ . '/../dist/drushrc.php');
     $content = str_replace('BUILD_ROOT', $this->options['build-root'], $content);
     $filename = $this->getDefaultDirectory() . '/drushrc.php';
-    $this->write(sprintf('Setup default Drush configuration file at <comment>%s</comment>', $filename));
+    $this->write('Setup default Drush configuration file at <comment>%s</comment>', $filename);
     file_put_contents($filename, $content);
   }
 
@@ -133,27 +125,18 @@ class Handler {
    * Setup Drush configration file.
    */
   protected function doSetupDevelopmentSettings() {
+    $source = __DIR__ . '/../dist/development.services.yml';
     $destination = $this->getSitesDirectory() . '/development.services.yml';
-    $this->write(sprintf('Make sure that Twig cache is disabled on <comment>%s</comment>', $destination));
-    copy(__DIR__ . '/../dist/development.services.yml', $destination);
+    $this->write('Make sure that Twig cache is disabled on <comment>%s</comment>', $destination);
+    copy($source, $destination);
 
     $destination = $this->getDefaultDirectory() . '/settings.local.php';
     $source = $this->getSitesDirectory() . '/example.settings.local.php';
     $content = file_get_contents($source);
     $content = str_replace('# $settings[\'cache\'][\'bins\']', '$settings[\'cache\'][\'bins\']', $content);
     file_put_contents($destination, $content);
-    $this->write(sprintf('Setup local development settings at <comment>%s</comment>.', $destination));
-    $this->write(sprintf('Note: local development settings file is disabled by default, enable it by un-commenting related lines in your settings.php file.', $destination));
-  }
-
-  /**
-   * Write log message to current output stream.
-   *
-   * @param string $message
-   *   Message.
-   */
-  protected function write($message) {
-    $this->io->write(' - ' . $message);
+    $this->write('Setup local development settings at <comment>%s</comment>.', $destination);
+    $this->write('Note: local development settings file is disabled by default, enable it by un-commenting related lines in your settings.php file.', $destination);
   }
 
   /**
@@ -173,21 +156,17 @@ class Handler {
    *   Sites directory location.
    */
   protected function getSitesDirectory() {
-    return $this->options['build-root'] . '/sites';
+    return $this->getBuildRoot() . '/sites';
   }
 
   /**
-   * Get symlink target.
-   *
-   * @param string $symlink
-   *   Symlink location.
+   * Get site directory location.
    *
    * @return string
-   *   Symlink target.
+   *   Sites directory location.
    */
-  protected function getSymlinkTarget($symlink) {
-    $parts = count(explode('/', $symlink));
-    return implode('/', array_fill(0, $parts - 1, '..'));
+  protected function getBuildRoot() {
+    return realpath($this->options['build-root']);
   }
 
   /**
@@ -199,10 +178,10 @@ class Handler {
   protected function getProjectRoot() {
     switch ($this->getProjectType()) {
       case 'drupal-module':
-        return $this->options['build-root'] . '/modules/custom';
+        return $this->getBuildRoot() . '/modules/custom';
 
       case 'drupal-theme':
-        return $this->options['build-root'] . '/themes/custom';
+        return $this->getBuildRoot() . '/themes/custom';
 
       default:
         throw new NotSupportedProjectTypeException();
@@ -230,24 +209,28 @@ class Handler {
   }
 
   /**
-   * Setup plugin options.
-   *
-   * @param \Composer\Package\RootPackage $package
-   *   Package object.
+   * Check whereas Drupal core is among dependencies.
    */
-  protected function setupOptions(RootPackage $package) {
-    $extra = $package->getExtra() + [self::PLUGIN_KEY => $this->options];
-    $package->setExtra($extra);
+  private function ensureDrupalCore() {
+    $packages = $this->composer->getPackage()->getDevRequires();
+    if (!array_key_exists('drupal/core', $packages)) {
+      throw new DrupalCoreNotFoundException();
+    }
+  }
+
+  /**
+   * Setup plugin options.
+   */
+  private function ensureOptions() {
+    $extra = $this->package->getExtra() + [self::PLUGIN_KEY => $this->options];
+    $this->package->setExtra($extra);
   }
 
   /**
    * Setup Composer Installer paths.
-   *
-   * @param \Composer\Package\RootPackage $package
-   *   Package object.
    */
-  protected function setupInstallerPaths(RootPackage $package) {
-    $extra = $package->getExtra();
+  private function ensureInstallerPaths() {
+    $extra = $this->package->getExtra();
     $extra['installer-paths'] = [
       $this->options['build-root'] . '/core' => ['type:drupal-core'],
       $this->options['build-root'] . '/libraries/{$name}' => ['type:drupal-library'],
@@ -255,20 +238,28 @@ class Handler {
       $this->options['build-root'] . '/profiles/contrib/{$name}' => ['type:drupal-profile'],
       $this->options['build-root'] . '/themes/contrib/{$name}' => ['type:drupal-theme'],
     ];
-    $package->setExtra($extra);
+    $this->package->setExtra($extra);
   }
 
   /**
    * Force scaffolding to run at every install/update.
-   *
-   * @param \Composer\Package\RootPackage $package
-   *   Package object.
    */
-  protected function setupScripts(RootPackage $package) {
-    $scripts = $package->getScripts();
+  protected function ensureScripts() {
+    $scripts = $this->package->getScripts();
     $scripts[Handler::PLUGIN_KEY][] = "NuvoleWeb\\DrupalComponentScaffold\\Plugin::scaffold";
     $scripts[DrupalScaffold::POST_DRUPAL_SCAFFOLD_CMD][] = "NuvoleWeb\\DrupalComponentScaffold\\Plugin::scaffold";
-    $package->setScripts($scripts);
+    $this->package->setScripts($scripts);
+  }
+
+  /**
+   * Write log message to current output stream.
+   *
+   * @param mixed $args
+   *   Method arguments.
+   */
+  protected function write(...$args) {
+    $args[0] = ' - ' . $args[0];
+    $this->io->write(call_user_func_array('sprintf', $args));
   }
 
 }
