@@ -1,7 +1,7 @@
 # Drupal Component Scaffold
 
-The *Drupal Component Scaffold* [Composer plugin](https://getcomposer.org/doc/articles/plugins.md) makes Drupal 8 module
-and/or theme maintainers enjoy a modern PHP development experience by providing a fully functional Drupal site right
+The *Drupal Component Scaffold* [Composer plugin](https://getcomposer.org/doc/articles/plugins.md) makes Drupal 8 project maintainers 
+enjoy a modern PHP development experience by providing a fully functional Drupal site right
 within the project root directory.
 
 Simply list your project requirements (core version, modules,e etc.) the plgin will take care of the rest, including
@@ -13,13 +13,11 @@ For example, the following `composer.json`:
 {
   "name": "drupal/my_module",
   "type": "drupal-module",
-  ...
   "require-dev": {
     "nuvoleweb/drupal-component-scaffold": "*",
     "drush/drush": "~8.0",
     "drupal/core": "~8",
     "drupal/panels": "~4",
-    ...
   },
   "repositories": [
     {
@@ -61,15 +59,15 @@ Will result in:
 └── my_module.module
 ```
 
-## Installation
+The project depends on the excellent [Drupal Scaffold](https://github.com/drupal-composer/drupal-scaffold) project.
+
+## Usage
 
 Require it via Composer as a development dependency:
 
 ```
 $ composer require nuvoleweb/drupal-component-scaffold --dev
-``` 
-
-The project depends on the excellent [Drupal Scaffold](https://github.com/drupal-composer/drupal-scaffold) project.
+```
 
 After that just run:
 
@@ -77,18 +75,16 @@ After that just run:
 $ composer install
 ```
 
-*Drupal Component Scaffold* will kick-in right after *Drupal Scaffold* will be done downloading all necessary files.
+*Drupal Component Scaffold* will kick-in right after, and only if, *Drupal Scaffold* will be invoked.
 
-## Usage
-
-The final Drupal site will be available in the `./build` directory by default, you can change that by specifying the
-following `extra` option:
+The final Drupal site will be available in the `./build` directory. You can change that by overriding the `build-root`
+option as follow:
 
 ```json
 {
   "extra": {
     "drupal-component-scaffold": {
-      "build": "web"
+      "build-root": "web"
     }
   }
 }
@@ -98,7 +94,11 @@ Component scaffolding can be triggered at any time by running:
 
 ```
 $ composer drupal-component-scaffold
+```
 
+A successful ran will produce the following output:
+
+```   
 Running component scaffolding:
  - Prepare custom projects directory at /path/to/my_module/build/modules/custom
  - Make /path/to/my_module/build/sites/default writable
