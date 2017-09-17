@@ -5,6 +5,8 @@ namespace NuvoleWeb\DrupalComponentScaffold;
 use Composer\Composer;
 use Composer\IO\IOInterface;
 use Composer\Package\RootPackage;
+use DrupalComposer\DrupalScaffold\Handler as DrupalScaffold;
+use NuvoleWeb\DrupalComponentScaffold\Exceptions\NotSupportedProjectTypeException;
 
 /**
  * Class Handler.
@@ -69,26 +71,55 @@ class Handler {
    * Setup development build.
    */
   public function setupDevelopmentBuild() {
+    $this->io->write('<info>Running component scaffolding:</info>');
+    $this->doSetupDirectories();
+    $this->doCreateSymlink();
+    $this->doSetupDrush();
+  }
 
-    // Ensure directory exists.
+  /**
+   * Setup build directories.
+   */
+  protected function doSetupDirectories() {
+    $this->write(sprintf('Prepare custom projects directory at <comment>%s</comment>', $this->getProjectRoot()));
     if (!file_exists($this->getProjectRoot())) {
       mkdir($this->getProjectRoot(), 0755, TRUE);
     }
 
-    // Symlink project.
+    $this->write(sprintf('Make <comment>%s</comment> writable', $this->getDefaultDirectory()));
+    chmod($this->getDefaultDirectory(), 0755);
+  }
+
+  /**
+   * Create project symlink.
+   */
+  protected function doCreateSymlink() {
     $symlink = $this->getProjectRoot() . '/' . $this->getProjectName();
+    $this->write(sprintf('Symlink project at <comment>%s</comment>', $symlink));
     if (!file_exists($symlink)) {
       symlink($this->getSymlinkTarget($symlink), $symlink);
     }
+  }
 
-    // Make sites/default directory writable.
-    chmod($this->getDefaultDirectory(), 0755);
-
-    // Setup Drush configration file.
+  /**
+   * Setup Drush configration file.
+   */
+  protected function doSetupDrush() {
     $content = file_get_contents(__DIR__ . '/../dist/drushrc.php');
     $content = str_replace('BUILD_ROOT', $this->options['build-root'], $content);
     $filename = $this->getDefaultDirectory() . '/drushrc.php';
+    $this->write(sprintf('Setup default Drush configuration file at <comment>%s</comment>', $filename));
     file_put_contents($filename, $content);
+  }
+
+  /**
+   * Write log message to current output stream.
+   *
+   * @param string $message
+   *   Message.
+   */
+  protected function write($message) {
+    $this->io->write(' - ' . $message);
   }
 
   /**
@@ -130,7 +161,7 @@ class Handler {
         return $this->options['build-root'] . '/themes/custom';
 
       default:
-        throw new \InvalidArgumentException("Only modules and themes are supported.");
+        throw new NotSupportedProjectTypeException();
     }
   }
 
@@ -191,12 +222,8 @@ class Handler {
    */
   protected function setupScripts(RootPackage $package) {
     $scripts = $package->getScripts();
-    $scripts['post-install-cmd'] = isset($scripts['post-install-cmd']) ? $scripts['post-install-cmd'] : [];
-    $scripts['post-install-cmd'] = isset($scripts['post-update-cmd']) ? $scripts['post-install-cmd'] : [];
-    $scripts['post-install-cmd'][] = "DrupalComposer\\DrupalScaffold\\Plugin::scaffold";
-    $scripts['post-install-cmd'][] = "NuvoleWeb\\DrupalComponentScaffold\\Plugin::scaffold";
-    $scripts['post-update-cmd'][] = "DrupalComposer\\DrupalScaffold\\Plugin::scaffold";
-    $scripts['post-install-cmd'][] = "NuvoleWeb\\DrupalComponentScaffold\\Plugin::scaffold";
+    $scripts[Handler::PLUGIN_KEY][] = "NuvoleWeb\\DrupalComponentScaffold\\Plugin::scaffold";
+    $scripts[DrupalScaffold::POST_DRUPAL_SCAFFOLD_CMD][] = "NuvoleWeb\\DrupalComponentScaffold\\Plugin::scaffold";
     $package->setScripts($scripts);
   }
 
