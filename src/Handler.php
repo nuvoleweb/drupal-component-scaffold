@@ -93,8 +93,8 @@ class Handler {
    * Setup build directories.
    */
   protected function doSetupDirectories() {
-    $this->write('Prepare custom projects directory at <comment>%s</comment>', $this->getProjectRoot());
-    $this->fs->emptyDirectory($this->getProjectRoot());
+    $this->write('Prepare custom projects directory at <comment>%s</comment>', $this->getInstallationDirectory());
+    $this->fs->emptyDirectory($this->getInstallationDirectory());
 
     $this->write('Make <comment>%s</comment> writable', $this->getDefaultDirectory());
     chmod($this->getDefaultDirectory(), 0755);
@@ -104,10 +104,9 @@ class Handler {
    * Create project symlink.
    */
   protected function doCreateSymlink() {
-    $symlink = $this->getProjectRoot() . '/' . $this->getProjectName();
+    $symlink = $this->getInstallationDirectory() . '/' . $this->getProjectName();
     $this->write('Symlink project at <comment>%s</comment>', $symlink);
-
-    $this->fs->relativeSymlink($this->getBuildRoot(), $symlink);
+    $this->fs->relativeSymlink($this->getProjectDirectory(), $symlink);
   }
 
   /**
@@ -135,6 +134,14 @@ class Handler {
     $content = file_get_contents($source);
     $content = str_replace('# $settings[\'cache\'][\'bins\']', '$settings[\'cache\'][\'bins\']', $content);
     file_put_contents($destination, $content);
+
+    $destination = $this->getDefaultDirectory() . '/settings.php';
+    $content = file_get_contents($destination);
+    $ignore_directory_setting = '$settings[\'file_scan_ignore_directories\'][] = \'build\';';
+    if (strstr($content, $ignore_directory_setting) === FALSE) {
+      file_put_contents($destination, $ignore_directory_setting . PHP_EOL, FILE_APPEND);
+    }
+
     $this->write('Setup local development settings at <comment>%s</comment>.', $destination);
     $this->write('Note: local development settings file is disabled by default, enable it by un-commenting related lines in your settings.php file.', $destination);
   }
@@ -170,12 +177,22 @@ class Handler {
   }
 
   /**
-   * Get project root.
+   * Get base project directory.
+   *
+   * @return string
+   *   Sites directory location.
+   */
+  protected function getProjectDirectory() {
+    return realpath('.');
+  }
+
+  /**
+   * Get project installation directory.
    *
    * @return string
    *   Project root.
    */
-  protected function getProjectRoot() {
+  protected function getInstallationDirectory() {
     switch ($this->getProjectType()) {
       case 'drupal-module':
         return $this->getBuildRoot() . '/modules/custom';
