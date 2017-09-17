@@ -76,6 +76,7 @@ class Handler {
     $this->ensureOptions();
     $this->ensureInstallerPaths();
     $this->ensureScripts();
+    $this->ensurePatches();
   }
 
   /**
@@ -87,6 +88,22 @@ class Handler {
     $this->doCreateSymlink();
     $this->doSetupDrush();
     $this->doSetupDevelopmentSettings();
+  }
+
+  /**
+   * Pre autoload dump event handler.
+   *
+   * @param \Composer\Script\Event $event
+   *    Composer event.
+   */
+  public function preAutoloadDump(\Composer\Script\Event $event) {
+    $autoload = $this->package->getDevAutoload();
+    $autoload['psr-0']["Drupal\\Tests"] = $this->options['build-root'] . "/core/tests";
+    $autoload['psr-0']["Drupal\\KernelTests"] = $this->options['build-root'] . "/core/tests";
+    $autoload['psr-0']["Drupal\\FunctionalTests"] = $this->options['build-root'] . "/core/tests";
+    $autoload['psr-0']["Drupal\\FunctionalJavascriptTests"] = $this->options['build-root'] . "/core/tests";
+    $autoload['psr-4']["Drupal\\simpletest\\"] = $this->options['build-root'] . "/core/modules/simpletest/src";
+    $this->package->setDevAutoload($autoload);
   }
 
   /**
@@ -146,22 +163,6 @@ class Handler {
     file_put_contents($destination, $content);
     $this->write('Setup local development settings at <comment>%s</comment>.', $this->shortenDirectory($destination));
     $this->write('Note: local development settings file is disabled by default, enable it by un-commenting related lines in your settings.php file.');
-  }
-
-  /**
-   * Pre autoload dump event handler.
-   *
-   * @param \Composer\Script\Event $event
-   *    Composer event.
-   */
-  public function preAutoloadDump(\Composer\Script\Event $event) {
-    $autoload = $this->package->getDevAutoload();
-    $autoload['psr-0']["Drupal\\Tests"] = $this->options['build-root'] . "/core/tests";
-    $autoload['psr-0']["Drupal\\KernelTests"] = $this->options['build-root'] . "/core/tests";
-    $autoload['psr-0']["Drupal\\FunctionalTests"] = $this->options['build-root'] . "/core/tests";
-    $autoload['psr-0']["Drupal\\FunctionalJavascriptTests"] = $this->options['build-root'] . "/core/tests";
-    $autoload['psr-4']["Drupal\\simpletest\\"] = $this->options['build-root'] . "/core/modules/simpletest/src";
-    $this->package->setDevAutoload($autoload);
   }
 
   /**
@@ -297,6 +298,16 @@ class Handler {
     $scripts[Handler::PLUGIN_KEY][] = "NuvoleWeb\\DrupalComponentScaffold\\Plugin::scaffold";
     $scripts[DrupalScaffold::POST_DRUPAL_SCAFFOLD_CMD][] = "NuvoleWeb\\DrupalComponentScaffold\\Plugin::scaffold";
     $this->package->setScripts($scripts);
+  }
+
+  /**
+   * Apply patches.
+   */
+  private function ensurePatches() {
+    $extra = $this->package->getExtra();
+    $patch = realpath(__DIR__ . '/../dist/kernel-test-base.patch');
+    $extra['patches']['drupal/core']['Patch KernelTestBase'] = $patch;
+    $this->package->setExtra($extra);
   }
 
   /**
