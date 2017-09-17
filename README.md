@@ -1,11 +1,41 @@
 # Drupal Component Scaffold
 
-The *Drupal Component Scaffold* [Composer plugin](https://getcomposer.org/doc/articles/plugins.md) makes Drupal 8 project maintainers 
-enjoy a modern PHP development experience by providing a fully functional Drupal site right
-within the project root directory.
+The *Drupal Component Scaffold* [Composer plugin](https://getcomposer.org/doc/articles/plugins.md) makes Drupal 8 project
+maintainers enjoy a modern development experience by providing a fully functional Drupal site right within the project directory.
 
-Simply list your project requirements (core version, modules,e etc.) the plgin will take care of the rest, including
-symlinking the actual project into its proper location and setting up common development settings files.
+The project depends on the excellent [Drupal Scaffold](https://github.com/drupal-composer/drupal-scaffold) project and
+fires only after (and if) the main scaffolding tasks are ran. 
+
+## Usage
+
+Require it via Composer as follow:
+
+```
+$ composer require nuvoleweb/drupal-component-scaffold --dev
+```
+
+List your development dependencies (core version, modules, etc.) and run:
+
+```
+$ composer update
+```
+
+At this point the the plugin will:
+
+- Setup [Composer Installers](https://github.com/composer/installers) paths.
+- Register a post-"Drupal Scaffold" handler.
+
+When Drupal Scaffold is fired the plugin will:
+
+ - Prepare a custom projects directory at `./build/modules/custom`.
+ - Make `./build/sites/default` writable.
+ - Symlink your project at `./build/modules/custom/my_module` (or at `./build/themes/custom/my_theme`).
+ - Setup default Drush configuration file at `./build/sites/default/drushrc.php`.
+ - Make sure that Twig cache is disabled on `./build/sites/development.services.yml`.
+ - Setup local development settings at `./build/sites/default/settings.local.php`.
+
+Note: the local development settings file above is disabled by default, to enable it un-comment the related lines
+in your `settings.php` file.
 
 For example, the following `composer.json`:
 
@@ -59,26 +89,7 @@ Will result in:
 └── my_module.module
 ```
 
-The project depends on the excellent [Drupal Scaffold](https://github.com/drupal-composer/drupal-scaffold) project.
-
-## Usage
-
-Require it via Composer as a development dependency:
-
-```
-$ composer require nuvoleweb/drupal-component-scaffold --dev
-```
-
-After that just run:
-
-```
-$ composer install
-```
-
-*Drupal Component Scaffold* will kick-in right after, and only if, *Drupal Scaffold* will be invoked.
-
-The final Drupal site will be available in the `./build` directory. You can change that by overriding the `build-root`
-option as follow:
+You can change the build directory name by overriding `build-root` option as follow:
 
 ```json
 {
@@ -96,15 +107,5 @@ Component scaffolding can be triggered at any time by running:
 $ composer drupal-component-scaffold
 ```
 
-A successful ran will produce the following output:
-
-```   
-Running component scaffolding:
- - Prepare custom projects directory at /path/to/my_module/build/modules/custom
- - Make /path/to/my_module/build/sites/default writable
- - Symlink project at /path/to/my_module/build/modules/custom/ui_patterns
- - Setup default Drush configuration file at /path/to/my_module/build/sites/default/drushrc.php
- - Make sure that Twig cache is disabled on /path/to/my_module/build/sites/development.services.yml
- - Setup local development settings at /path/to/my_module/build/sites/default/settings.local.php.
- - Note: local development settings file is disabled by default, enable it by un-commenting related lines in your settings.php file.
-```
+Also, all customization options for [Drupal Scaffold](https://github.com/drupal-composer/drupal-scaffold) still apply,
+check its documentation for more. 
