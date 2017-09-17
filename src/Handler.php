@@ -149,6 +149,22 @@ class Handler {
   }
 
   /**
+   * Pre autoload dump event handler.
+   *
+   * @param \Composer\Script\Event $event
+   *    Composer event.
+   */
+  public function preAutoloadDump(\Composer\Script\Event $event) {
+    $autoload = $this->package->getDevAutoload();
+    $autoload['psr-0']["Drupal\\Tests"] = $this->options['build-root'] . "/core/tests";
+    $autoload['psr-0']["Drupal\\KernelTests"] = $this->options['build-root'] . "/core/tests";
+    $autoload['psr-0']["Drupal\\FunctionalTests"] = $this->options['build-root'] . "/core/tests";
+    $autoload['psr-0']["Drupal\\FunctionalJavascriptTests"] = $this->options['build-root'] . "/core/tests";
+    $autoload['psr-4']["Drupal\\simpletest\\"] = $this->options['build-root'] . "/core/modules/simpletest/src";
+    $this->package->setDevAutoload($autoload);
+  }
+
+  /**
    * Get default site directory location.
    *
    * @return string
