@@ -93,11 +93,13 @@ class Handler {
    * Setup build directories.
    */
   protected function doSetupDirectories() {
-    $this->write('Prepare custom projects directory at <comment>%s</comment>', $this->getInstallationDirectory());
-    $this->fs->emptyDirectory($this->getInstallationDirectory());
+    $destination = $this->getInstallationDirectory();
+    $this->write('Prepare custom projects directory at <comment>%s</comment>', $this->shortenDirectory($destination));
+    $this->fs->emptyDirectory($destination);
 
-    $this->write('Make <comment>%s</comment> writable', $this->getDefaultDirectory());
-    chmod($this->getDefaultDirectory(), 0755);
+    $destination = $this->getDefaultDirectory();
+    $this->write('Make <comment>%s</comment> writable', $this->shortenDirectory($destination));
+    chmod($destination, 0755);
   }
 
   /**
@@ -105,7 +107,7 @@ class Handler {
    */
   protected function doCreateSymlink() {
     $symlink = $this->getInstallationDirectory() . '/' . $this->getProjectName();
-    $this->write('Symlink project at <comment>%s</comment>', $symlink);
+    $this->write('Symlink project at <comment>%s</comment>', $this->shortenDirectory($symlink));
     $this->fs->relativeSymlink($this->getProjectDirectory(), $symlink);
   }
 
@@ -116,7 +118,7 @@ class Handler {
     $content = file_get_contents(__DIR__ . '/../dist/drushrc.php');
     $content = str_replace('BUILD_ROOT', $this->options['build-root'], $content);
     $filename = $this->getDefaultDirectory() . '/drushrc.php';
-    $this->write('Setup default Drush configuration file at <comment>%s</comment>', $filename);
+    $this->write('Setup default Drush configuration file at <comment>%s</comment>', $this->shortenDirectory($filename));
     file_put_contents($filename, $content);
   }
 
@@ -126,24 +128,24 @@ class Handler {
   protected function doSetupDevelopmentSettings() {
     $source = __DIR__ . '/../dist/development.services.yml';
     $destination = $this->getSitesDirectory() . '/development.services.yml';
-    $this->write('Make sure that Twig cache is disabled on <comment>%s</comment>', $destination);
+    $this->write('Make sure that Twig cache is disabled in <comment>%s</comment>', $this->shortenDirectory($destination));
     copy($source, $destination);
+
+    $destination = $this->getDefaultDirectory() . '/default.settings.php';
+    $content = file_get_contents($destination);
+    $ignore_directory_setting = '$settings[\'file_scan_ignore_directories\'][] = \'build\';';
+    if (strstr($content, $ignore_directory_setting) === FALSE) {
+      file_put_contents($destination, $ignore_directory_setting . PHP_EOL, FILE_APPEND);
+    }
+    $this->write('Add build directory to list of ignored paths in <comment>%s</comment>.', $this->shortenDirectory($destination));
 
     $destination = $this->getDefaultDirectory() . '/settings.local.php';
     $source = $this->getSitesDirectory() . '/example.settings.local.php';
     $content = file_get_contents($source);
     $content = str_replace('# $settings[\'cache\'][\'bins\']', '$settings[\'cache\'][\'bins\']', $content);
     file_put_contents($destination, $content);
-
-    $destination = $this->getDefaultDirectory() . '/settings.php';
-    $content = file_get_contents($destination);
-    $ignore_directory_setting = '$settings[\'file_scan_ignore_directories\'][] = \'build\';';
-    if (strstr($content, $ignore_directory_setting) === FALSE) {
-      file_put_contents($destination, $ignore_directory_setting . PHP_EOL, FILE_APPEND);
-    }
-
-    $this->write('Setup local development settings at <comment>%s</comment>.', $destination);
-    $this->write('Note: local development settings file is disabled by default, enable it by un-commenting related lines in your settings.php file.', $destination);
+    $this->write('Setup local development settings at <comment>%s</comment>.', $this->shortenDirectory($destination));
+    $this->write('Note: local development settings file is disabled by default, enable it by un-commenting related lines in your settings.php file.');
   }
 
   /**
@@ -184,6 +186,19 @@ class Handler {
    */
   protected function getProjectDirectory() {
     return realpath('.');
+  }
+
+  /**
+   * Shorten directory path.
+   *
+   * @param string $directory
+   *    Full directory path.
+   *
+   * @return string
+   *    Shortened directory path.
+   */
+  protected function shortenDirectory($directory) {
+    return str_replace($this->getProjectDirectory(), '.', $directory);
   }
 
   /**
