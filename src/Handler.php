@@ -6,6 +6,7 @@ use Composer\Composer;
 use Composer\IO\IOInterface;
 use Composer\Package\RootPackage;
 use DrupalComposer\DrupalScaffold\Handler as DrupalScaffold;
+use NuvoleWeb\DrupalComponentScaffold\Exceptions\DrupalCoreNotFoundException;
 use NuvoleWeb\DrupalComponentScaffold\Exceptions\NotSupportedProjectTypeException;
 
 /**
@@ -56,10 +57,11 @@ class Handler {
    *   IO instance.
    */
   public function __construct(Composer $composer, IOInterface $io) {
+    /** @var \Composer\Package\RootPackage $package */
     $this->composer = $composer;
     $this->io = $io;
+    $this->ensureDrupalCore();
 
-    /** @var \Composer\Package\RootPackage $package */
     $package = $composer->getPackage();
     $this->package = $package;
     $this->setupOptions($package);
@@ -75,6 +77,21 @@ class Handler {
     $this->doSetupDirectories();
     $this->doCreateSymlink();
     $this->doSetupDrush();
+    $this->doSetupDevelopmentSettings();
+  }
+
+  /**
+   * Check whereas Drupal core is among dependencies.
+   */
+  public function ensureDrupalCore() {
+    $package = $this->composer
+      ->getRepositoryManager()
+      ->getLocalRepository()
+      ->findPackage('drupal/core', '*');
+
+    if ($package === NULL) {
+      throw new DrupalCoreNotFoundException();
+    }
   }
 
   /**
@@ -113,6 +130,23 @@ class Handler {
   }
 
   /**
+   * Setup Drush configration file.
+   */
+  protected function doSetupDevelopmentSettings() {
+    $destination = $this->getSitesDirectory() . '/development.services.yml';
+    $this->write(sprintf('Make sure that Twig cache is disabled on <comment>%s</comment>', $destination));
+    copy(__DIR__ . '/../dist/development.services.yml', $destination);
+
+    $destination = $this->getDefaultDirectory() . '/settings.local.php';
+    $source = $this->getSitesDirectory() . '/example.settings.local.php';
+    $content = file_get_contents($source);
+    $content = str_replace('# $settings[\'cache\'][\'bins\']', '$settings[\'cache\'][\'bins\']', $content);
+    file_put_contents($destination, $content);
+    $this->write(sprintf('Setup local development settings at <comment>%s</comment>.', $destination));
+    $this->write(sprintf('Note: local development settings file is disabled by default, enable it by un-commenting related lines in your settings.php file.', $destination));
+  }
+
+  /**
    * Write log message to current output stream.
    *
    * @param string $message
@@ -129,7 +163,17 @@ class Handler {
    *   Default directory location.
    */
   protected function getDefaultDirectory() {
-    return $this->options['build-root'] . '/sites/default';
+    return $this->getSitesDirectory() . '/default';
+  }
+
+  /**
+   * Get site directory location.
+   *
+   * @return string
+   *   Sites directory location.
+   */
+  protected function getSitesDirectory() {
+    return $this->options['build-root'] . '/sites';
   }
 
   /**
