@@ -137,7 +137,7 @@ tests will ran correctly. [See an example here](https://github.com/nuvoleweb/ui_
 When fired the plugin will:
 
 - Setup [Composer Installers](https://github.com/composer/installers) paths.
-- Register a post-"[Drupal Scaffold](https://github.com/drupal-composer/drupal-scaffold)" event handler.
+- Register a post-[Drupal Scaffold](https://github.com/drupal-composer/drupal-scaffold) event handler.
 
 After Drupal Scaffold is done the plugin will:
 
