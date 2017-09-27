@@ -1,20 +1,25 @@
 language: php
-dist: precise
-
 php:
+  - 5.5
+  - 5.6
   - 7.0
 
-env:
-  global:
-    - PATH=$PATH:/home/travis/.composer/vendor/bin:$TRAVIS_BUILD_DIR/vendor/bin
+sudo: false
+
+git:
+ depth: 10000
+
+before_install:
+  - phpenv config-rm xdebug.ini
+  - composer --verbose self-update
+  - composer --version
 
 install:
-  - composer self-update
-  - composer install
+  - composer --verbose install
+
+before_script:
+  - git config --global user.email "travisci@example.com"
+  - git config --global user.name "Travis CI Test"
 
 script:
-  - grumphp run
-  - phpunit
-
-notifications:
-  email: false
+  - ./vendor/bin/phpunit
