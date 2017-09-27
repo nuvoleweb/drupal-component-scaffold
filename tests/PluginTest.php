@@ -66,40 +66,27 @@ class PluginTest extends TestCase {
   }
 
   /**
-   * Tests a simple composer install without core, but adding core later.
+   * Test plugin.
    */
-  public function testComposerInstallAndUpdate() {
+  public function testComposerPlugin() {
     $file = $this->drupalDir . '/index.php';
     $this->assertFileNotExists($file, 'Scaffold file should not be exist.');
     $this->composer('install');
     $this->assertFileExists($this->drupalDir . '/core', 'Drupal core is installed.');
+    $this->assertFileExists($this->drupalDir . '/modules/custom');
+    $this->assertFileExists($this->drupalDir . '/modules/custom/test_module');
+    $this->assertFileExists($this->drupalDir . '/modules/custom/test_module/test_module.info.yml');
+    $this->assertFileExists($this->drupalDir . '/sites/default/drushrc.php');
+    $this->assertFileExists($this->drupalDir . '/sites/default/settings.local.php');
+    $this->assertFileExists($this->drupalDir . '/sites/default/default.settings.php');
+    $content = file_get_contents($this->drupalDir . '/sites/default/default.settings.php');
+    $this->assertContains('$settings[\'file_scan_ignore_directories\'][] = \'build\';', $content);
+
     $this->assertFileExists($file, 'Scaffold file should be automatically installed.');
     $this->fs->remove($file);
     $this->assertFileNotExists($file, 'Scaffold file should not be exist.');
     $this->composer('drupal-scaffold');
     $this->assertFileExists($file, 'Scaffold file should be installed by "drupal-scaffold" command.');
-
-    foreach (['8.0.1', '8.1.x-dev'] as $version) {
-      // We touch a scaffold file, so we can check the file was modified after
-      // the scaffold update.
-      touch($file);
-      $mtime_touched = filemtime($file);
-      // Requiring a newer version triggers "composer update".
-      $this->composer('require --update-with-dependencies drupal/core:"' . $version . '"');
-      clearstatcache();
-      $mtime_after = filemtime($file);
-      $this->assertNotEquals($mtime_after, $mtime_touched, 'Scaffold file was modified by composer update. (' . $version . ')');
-    }
-
-    // We touch a scaffold file, so we can check the file was modified after
-    // the custom commandscaffold update.
-    touch($file);
-    clearstatcache();
-    $mtime_touched = filemtime($file);
-    $this->composer('drupal-scaffold');
-    clearstatcache();
-    $mtime_after = filemtime($file);
-    $this->assertNotEquals($mtime_after, $mtime_touched, 'Scaffold file was modified by custom command.');
   }
 
   /**
@@ -140,11 +127,12 @@ class PluginTest extends TestCase {
     return [
       'name' => 'drupal/test_module',
       'type' => 'drupal-module',
+      'prefer-stable' => TRUE,
       'minimum-stability' => 'dev',
       'require-dev' => [
         'nuvoleweb/drupal-component-scaffold' => $this->tmpReleaseTag,
         'composer/installers' => '~1',
-        'drupal/core' => '8.0.0',
+        'drupal/core' => '8.3.0',
       ],
       'repositories' => [
         [

@@ -1,5 +1,7 @@
 # Drupal Component Scaffold
 
+[![Build Status](https://travis-ci.org/nuvoleweb/drupal-component-scaffold.svg?branch=master)](https://travis-ci.org/nuvoleweb/drupal-component-scaffold)
+
 *Drupal Component Scaffold* is a [Composer plugin](https://getcomposer.org/doc/articles/plugins.md) that helps Drupal 8
 project maintainers enjoy leaner development workflow: working on modules and themes will be like working on any other
 modern PHP component.
