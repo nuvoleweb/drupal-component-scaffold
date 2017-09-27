@@ -8,3 +8,5 @@ parameters:
       ignore_patterns:
         - vendor/
         - dist/
+        - build/
+        - tests/
