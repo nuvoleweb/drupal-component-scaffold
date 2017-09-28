@@ -21,4 +21,8 @@ before_script:
   - git config --global user.name "Travis CI Test"
 
 script:
+  - ./vendor/bin/grumphp run
   - ./vendor/bin/phpunit
+
+notifications:
+  email: false

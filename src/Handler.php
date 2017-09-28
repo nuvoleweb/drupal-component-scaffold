@@ -2,11 +2,13 @@
 
 namespace NuvoleWeb\DrupalComponentScaffold;
 
+use Composer\Script\Event;
 use Composer\Composer;
 use Composer\IO\IOInterface;
 use Composer\Util\Filesystem;
 use DrupalComposer\DrupalScaffold\Handler as DrupalScaffold;
 use NuvoleWeb\DrupalComponentScaffold\Exceptions\DrupalCoreNotFoundException;
+use NuvoleWeb\DrupalComponentScaffold\Exceptions\InstallerPathsNotFoundException;
 use NuvoleWeb\DrupalComponentScaffold\Exceptions\NotSupportedProjectTypeException;
 
 /**
@@ -50,15 +52,6 @@ class Handler {
   protected $fs;
 
   /**
-   * Composer plugin options.
-   *
-   * @var array
-   */
-  protected $options = [
-    'build-root' => 'build',
-  ];
-
-  /**
    * Handler constructor.
    *
    * @param \Composer\Composer $composer
@@ -73,8 +66,6 @@ class Handler {
     $this->fs = new Filesystem();
 
     $this->ensureDrupalCore();
-    $this->ensureOptions();
-    $this->ensureInstallerPaths();
     $this->ensureScripts();
     $this->ensurePatches();
   }
@@ -94,15 +85,16 @@ class Handler {
    * Pre autoload dump event handler.
    *
    * @param \Composer\Script\Event $event
-   *    Composer event.
+   *   Composer event.
    */
-  public function preAutoloadDump(\Composer\Script\Event $event) {
+  public function preAutoloadDump(Event $event) {
+    $root = $this->getBuildRoot();
     $autoload = $this->package->getDevAutoload();
-    $autoload['psr-0']["Drupal\\Tests"] = $this->options['build-root'] . "/core/tests";
-    $autoload['psr-0']["Drupal\\KernelTests"] = $this->options['build-root'] . "/core/tests";
-    $autoload['psr-0']["Drupal\\FunctionalTests"] = $this->options['build-root'] . "/core/tests";
-    $autoload['psr-0']["Drupal\\FunctionalJavascriptTests"] = $this->options['build-root'] . "/core/tests";
-    $autoload['psr-4']["Drupal\\simpletest\\"] = $this->options['build-root'] . "/core/modules/simpletest/src";
+    $autoload['psr-0']["Drupal\\Tests"] = $root . "/core/tests";
+    $autoload['psr-0']["Drupal\\KernelTests"] = $root . "/core/tests";
+    $autoload['psr-0']["Drupal\\FunctionalTests"] = $root . "/core/tests";
+    $autoload['psr-0']["Drupal\\FunctionalJavascriptTests"] = $root . "/core/tests";
+    $autoload['psr-4']["Drupal\\simpletest\\"] = $root . "/core/modules/simpletest/src";
     $this->package->setDevAutoload($autoload);
   }
 
@@ -133,7 +125,7 @@ class Handler {
    */
   protected function doSetupDrush() {
     $content = file_get_contents(__DIR__ . '/../dist/drushrc.php');
-    $content = str_replace('BUILD_ROOT', $this->options['build-root'], $content);
+    $content = str_replace('BUILD_ROOT', $this->getBuildRoot(), $content);
     $filename = $this->getDefaultDirectory() . '/drushrc.php';
     $this->write('Setup default Drush configuration file at <comment>%s</comment>', $this->shortenDirectory($filename));
     file_put_contents($filename, $content);
@@ -150,7 +142,7 @@ class Handler {
 
     $destination = $this->getDefaultDirectory() . '/default.settings.php';
     $content = file_get_contents($destination);
-    $ignore_directory_setting = '$settings[\'file_scan_ignore_directories\'][] = \'build\';';
+    $ignore_directory_setting = sprintf('$settings[\'file_scan_ignore_directories\'][] = \'%s\';', $this->getBuildRoot());
     if (strstr($content, $ignore_directory_setting) === FALSE) {
       file_put_contents($destination, $ignore_directory_setting . PHP_EOL, FILE_APPEND);
     }
@@ -182,7 +174,7 @@ class Handler {
    *   Sites directory location.
    */
   protected function getSitesDirectory() {
-    return $this->getBuildRoot() . '/sites';
+    return $this->getBuildDirectory() . '/sites';
   }
 
   /**
@@ -191,8 +183,27 @@ class Handler {
    * @return string
    *   Sites directory location.
    */
+  protected function getBuildDirectory() {
+    return realpath($this->getBuildRoot());
+  }
+
+  /**
+   * Get build root name from installer paths.
+   *
+   * @return string
+   *   Sites directory location.
+   */
   protected function getBuildRoot() {
-    return realpath($this->options['build-root']);
+
+    $extra = $this->package->getExtra();
+    $paths = isset($extra['installer-paths']) ? $extra['installer-paths'] : [];
+    foreach ($paths as $path => $types) {
+      if (in_array("type:drupal-core", $types)) {
+        return str_replace('/core', '', $path);
+      }
+    }
+
+    throw new InstallerPathsNotFoundException();
   }
 
   /**
@@ -209,10 +220,10 @@ class Handler {
    * Shorten directory path.
    *
    * @param string $directory
-   *    Full directory path.
+   *   Full directory path.
    *
    * @return string
-   *    Shortened directory path.
+   *   Shortened directory path.
    */
   protected function shortenDirectory($directory) {
     return str_replace($this->getProjectDirectory(), '.', $directory);
@@ -227,10 +238,10 @@ class Handler {
   protected function getInstallationDirectory() {
     switch ($this->getProjectType()) {
       case 'drupal-module':
-        return $this->getBuildRoot() . '/modules/custom';
+        return $this->getBuildDirectory() . '/modules/custom';
 
       case 'drupal-theme':
-        return $this->getBuildRoot() . '/themes/custom';
+        return $this->getBuildDirectory() . '/themes/custom';
 
       default:
         throw new NotSupportedProjectTypeException();
@@ -265,29 +276,6 @@ class Handler {
     if (!array_key_exists('drupal/core', $packages)) {
       throw new DrupalCoreNotFoundException();
     }
-  }
-
-  /**
-   * Setup plugin options.
-   */
-  private function ensureOptions() {
-    $extra = $this->package->getExtra() + [self::PLUGIN_KEY => $this->options];
-    $this->package->setExtra($extra);
-  }
-
-  /**
-   * Setup Composer Installer paths.
-   */
-  private function ensureInstallerPaths() {
-    $extra = $this->package->getExtra();
-    $extra['installer-paths'] = [
-      $this->options['build-root'] . '/core' => ['type:drupal-core'],
-      $this->options['build-root'] . '/libraries/{$name}' => ['type:drupal-library'],
-      $this->options['build-root'] . '/modules/contrib/{$name}' => ['type:drupal-module'],
-      $this->options['build-root'] . '/profiles/contrib/{$name}' => ['type:drupal-profile'],
-      $this->options['build-root'] . '/themes/contrib/{$name}' => ['type:drupal-theme'],
-    ];
-    $this->package->setExtra($extra);
   }
 
   /**

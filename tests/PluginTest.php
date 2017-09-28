@@ -46,7 +46,7 @@ class PluginTest extends TestCase {
     $this->fs = new Filesystem();
     $this->rootDir = realpath(realpath(__DIR__ . '/..'));
     $this->tmpDir = $this->rootDir . '/build';
-    $this->drupalDir = $this->rootDir . '/build/build';
+    $this->drupalDir = $this->rootDir . '/build/web';
 
     // Prepare temp directory.
     $this->ensureDirectoryExistsAndClear($this->tmpDir);
@@ -80,7 +80,7 @@ class PluginTest extends TestCase {
     $this->assertFileExists($this->drupalDir . '/sites/default/settings.local.php');
     $this->assertFileExists($this->drupalDir . '/sites/default/default.settings.php');
     $content = file_get_contents($this->drupalDir . '/sites/default/default.settings.php');
-    $this->assertContains('$settings[\'file_scan_ignore_directories\'][] = \'build\';', $content);
+    $this->assertContains('$settings[\'file_scan_ignore_directories\'][] = \'web\';', $content);
 
     $this->assertFileExists($file, 'Scaffold file should be automatically installed.');
     $this->fs->remove($file);
@@ -138,6 +138,12 @@ class PluginTest extends TestCase {
         [
           'type' => 'vcs',
           'url' => $this->rootDir,
+        ],
+      ],
+      'extra' => [
+        'installer-paths' => [
+          'web/core' => ["type:drupal-core"],
+          'web/modules/contrib/{$name}' => ["type:drupal-module"],
         ],
       ],
       'scripts' => [
