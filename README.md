@@ -53,9 +53,12 @@ For example, take the following `composer.json`:
       "url": "https://packages.drupal.org/8"
     }
   ],
-  "conflict": {
-    "drupal/drupal": "*"
-  }
+  "extra": {
+    "installer-paths": {
+      "web/core": ["type:drupal-core"],
+      "web/modules/contrib/{$name}": ["type:drupal-module"]
+    }
+  }  
 }
 ```
 
@@ -63,7 +66,7 @@ Running `composer install` will result in:
 
 ```
 .
-├── build
+├── web
 │   ├── autoload.php
 │   ├── core
 │   ├── modules
@@ -89,13 +92,15 @@ Running `composer install` will result in:
 
 ## Configuration
 
-You can change the build directory name by overriding the `build-root` option as follow:
+Build directory will be derived by the `installer-paths`, make sure you specify there where you wish to install
+your core, modules etc:
 
 ```json
 {
   "extra": {
-    "drupal-component-scaffold": {
-      "build-root": "web"
+    "installer-paths": {
+      "web/core": ["type:drupal-core"],
+      "web/modules/contrib/{$name}": ["type:drupal-module"]
     }
   }
 }
@@ -143,12 +148,12 @@ When fired the plugin will:
 
 After Drupal Scaffold is done the plugin will:
 
- - Prepare a custom projects directory at `./build/modules/custom`.
- - Make `./build/sites/default` writable.
- - Symlink your project at `./build/modules/custom/my_module` (or at `./build/themes/custom/my_theme`).
- - Setup default Drush configuration file at `./build/sites/default/drushrc.php`.
- - Make sure that Twig cache is disabled on `./build/sites/development.services.yml`.
- - Setup local development settings at `./build/sites/default/settings.local.php`.
+ - Prepare a custom projects directory at `./web/modules/custom`.
+ - Make `./web/sites/default` writable.
+ - Symlink your project at `./web/modules/custom/my_module` (or at `./web/themes/custom/my_theme`).
+ - Setup default Drush configuration file at `./web/sites/default/drushrc.php`.
+ - Make sure that Twig cache is disabled on `./web/sites/development.services.yml`.
+ - Setup local development settings at `./web/sites/default/settings.local.php`.
  - Patch Drupal core with [kernel-test-base.patch](dist/kernel-test-base.patch) allowing Kernel tests to run smoothly.
 
 Note: the local development settings file above is disabled by default, to enable it un-comment the related lines
