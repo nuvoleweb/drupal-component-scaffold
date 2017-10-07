@@ -8,6 +8,7 @@ use Composer\IO\IOInterface;
 use Composer\Plugin\Capable;
 use Composer\Plugin\PluginInterface;
 use Composer\Plugin\Capability\CommandProvider as CommandProviderCapability;
+use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 
 /**
@@ -42,9 +43,9 @@ class Plugin implements PluginInterface, Capable, EventSubscriberInterface {
    * Pre autoload dump event handler.
    *
    * @param \Composer\Script\Event $event
-   *    Composer event.
+   *   Composer event.
    */
-  public function preAutoloadDump(\Composer\Script\Event $event) {
+  public function preAutoloadDump(Event $event) {
     self::$handler->preAutoloadDump($event);
   }
 
