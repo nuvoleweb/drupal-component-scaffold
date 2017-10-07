@@ -243,6 +243,9 @@ class Handler {
       case 'drupal-theme':
         return $this->getBuildDirectory() . '/themes/custom';
 
+      case 'drupal-drush':
+        return $this->getBuildDirectory() . '/sites/all/drush';
+
       default:
         throw new NotSupportedProjectTypeException();
     }
