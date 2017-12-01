@@ -1,4 +1,12 @@
 parameters:
+  testsuites:
+    static:
+      tasks:
+        - phpcs
+    unit:
+      tasks:
+        - phpunit
+  process_timeout: 300
   ascii:
     failed: ~
     succeeded: ~
@@ -10,3 +18,8 @@ parameters:
         - dist/
         - build/
         - tests/
+    phpunit:
+      config_file: ~
+      testsuite: ~
+      group: []
+      always_execute: false

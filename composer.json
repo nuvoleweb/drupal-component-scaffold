@@ -3,18 +3,30 @@
     "description": "Scaffolding Composer plugin for Drupal modules and themes.",
     "type": "composer-plugin",
     "license": "GPL-2.0+",
+    "keywords": ["drupal", "scaffold", "composer-plugin"],
+    "homepage": "https://github.com/nuvoleweb/drupal-component-scaffold",
     "authors": [
         {
             "name": "Nuvole Web",
             "email": "info@nuvole.org"
         }
     ],
+    "support": {
+        "issues": "https://github.com/nuvoleweb/drupal-component-scaffold/issues",
+        "source": "https://github.com/nuvoleweb/drupal-component-scaffold"
+    },
     "require": {
         "php": ">=5.6",
         "composer-plugin-api": "^1.0.0",
         "composer/installers": "^1.2",
         "cweagans/composer-patches": "~1.0",
         "drupal-composer/drupal-scaffold": "^2.3"
+    },
+    "require-dev": {
+        "composer/composer": "dev-master",
+        "phpro/grumphp": "^0.12",
+        "drupal/coder": "^8.2",
+        "phpunit/phpunit": "~5"
     },
     "autoload": {
         "psr-4": {
@@ -23,11 +35,5 @@
     },
     "extra": {
         "class": "NuvoleWeb\\DrupalComponentScaffold\\Plugin"
-    },
-    "require-dev": {
-        "composer/composer": "dev-master",
-        "phpro/grumphp": "^0.11.3",
-        "drupal/coder": "^8.2",
-        "phpunit/phpunit": "~5"
     }
 }
