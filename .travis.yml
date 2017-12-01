@@ -22,7 +22,6 @@ before_script:
 
 script:
   - ./vendor/bin/grumphp run
-  - ./vendor/bin/phpunit
 
 notifications:
   email: false
